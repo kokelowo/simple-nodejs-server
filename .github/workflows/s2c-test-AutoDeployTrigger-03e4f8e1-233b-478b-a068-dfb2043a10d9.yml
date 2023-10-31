@@ -1,0 +1,45 @@
+name: Trigger auto deployment for s2c-test
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '**'
+    - '.github/workflows/s2c-test-AutoDeployTrigger-03e4f8e1-233b-478b-a068-dfb2043a10d9.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.S2CTEST_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.S2CTEST_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.S2CTEST_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appSourcePath: ${{ github.workspace }} 
+          registryUrl: kokelowo.azurecr.io
+          registryUsername: ${{ secrets.S2CTEST_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.S2CTEST_REGISTRY_PASSWORD }}
+          containerAppName: s2c-test
+          resourceGroup: kokelowo-containers
+          imageToBuild: kokelowo.azurecr.io/s2c-test:${{ github.sha }}
+          
+
+
